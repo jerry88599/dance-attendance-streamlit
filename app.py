@@ -285,7 +285,7 @@ elif page == "学生追踪":
         else:
             st.error("❌ 暂无任何考勤记录")
 
-# 6. 记录管理
+# 6. 记录管理（修复重复key报错）
 elif page == "记录管理":
     st.title("管理考勤记录")
     # 筛选
@@ -307,9 +307,9 @@ elif page == "记录管理":
                     continue
                 records.append(row)
     
-    # 显示记录 & 删除
+    # 显示记录 & 删除（新增索引i确保key唯一）
     if records:
-        for r in records:
+        for i, r in enumerate(records):
             col1, col2, col3, col4, col5 = st.columns([3, 2, 2, 2, 2])
             with col1:
                 st.write(r['日期'])
@@ -320,7 +320,7 @@ elif page == "记录管理":
             with col4:
                 st.write("✅ 到课" if r['是否到课']=='1' else "❌ 缺课")
             with col5:
-                if st.button("删除", key=f"del_rec_{r['日期']}_{r['班级']}_{r['学生姓名']}"):
+                if st.button("删除", key=f"del_rec_{i}_{r['日期']}_{r['班级']}_{r['学生姓名']}"):
                     delete_record(r['日期'], r['班级'], r['学生姓名'])
                     st.success(f"✅ 已删除 {r['日期']} {r['班级']} {r['学生姓名']} 的记录")
                     st.rerun()
