@@ -31,6 +31,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# 新增：移动端自动收起侧边栏的逻辑
+if 'selected_page' not in st.session_state:
+    st.session_state['selected_page'] = None
+
 # 全局样式优化
 st.markdown("""
 <style>
@@ -122,9 +126,32 @@ config = get_student_config()
 
 # 侧边栏导航
 st.sidebar.title("💃 街舞考勤系统")
-page = st.sidebar.radio("功能菜单", [
-    "首页", "考勤录入", "学员管理", "月度统计", "学生追踪", "记录管理", "数据备份恢复"
-])
+page = st.sidebar.radio(
+    "功能菜单",
+    ["首页", "考勤录入", "学员管理", "月度统计", "学生追踪", "记录管理", "数据备份恢复"],
+    index=0
+)
+
+# 移动端自动收起侧边栏
+if st.session_state['selected_page'] != page:
+    st.session_state['selected_page'] = page
+    # 注入JS，在移动端自动收起侧边栏
+    st.markdown(
+        """
+        <script>
+        // 检测是否为移动设备
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+            // 找到侧边栏并关闭
+            const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
+            if (sidebar && sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+            }
+        }
+        </script>
+        """,
+        unsafe_allow_html=True
+    )
 
 # ------------------- 1. 首页 -------------------
 if page == "首页":
