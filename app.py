@@ -265,12 +265,14 @@ elif page == "学生追踪":
         for r in records:
             st.write(f"- {r['日期']} | {r['班级']}")
 
-# ------------------- 6. 记录管理（修复班级筛选失效问题） -------------------
+# ------------------- 6. 记录管理（优化：默认只显示到课记录） -------------------
 elif page == "记录管理":
     st.title("🗑️ 考勤记录管理")
     # 筛选条件（加唯一key，避免控件冲突）
     date_filter = st.text_input("日期筛选（格式：2026-03）", key="rec_date_filter")
     class_filter = st.selectbox("班级筛选", ["", "街舞1班", "街舞2班"], key="rec_class_filter")
+    # 新增：显示类型筛选，默认只看「到课」
+    show_type = st.radio("显示类型", ["到课", "缺课", "全部"], index=0, horizontal=True, key="show_type")
     
     # 加载并筛选记录
     records = []
@@ -281,9 +283,15 @@ elif page == "记录管理":
                 # 日期筛选
                 if date_filter and not row["日期"].startswith(date_filter):
                     continue
-                # 班级筛选（核心修复：严格匹配选中的班级）
+                # 班级筛选
                 if class_filter and row["班级"] != class_filter:
                     continue
+                # 显示类型筛选（核心优化）
+                if show_type == "到课" and row["是否到课"] != "1":
+                    continue
+                if show_type == "缺课" and row["是否到课"] != "0":
+                    continue
+                # 全部则不额外过滤
                 records.append(row)
     
     # 显示记录并提供删除按钮
