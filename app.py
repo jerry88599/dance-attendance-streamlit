@@ -3,6 +3,7 @@ import csv
 import os
 from datetime import datetime
 import json
+import pandas as pd  # 新增：处理CSV导入
 
 # 访问密码验证（改成你自己的密码）
 def check_access():
@@ -86,6 +87,38 @@ def delete_record(date, class_name, student):
         writer.writeheader()
         writer.writerows(records)
 
+# ---------------------- 新增：数据导入导出功能 ----------------------
+def import_attendance_csv(uploaded_file):
+    """导入考勤CSV文件"""
+    try:
+        # 读取上传的CSV
+        df = pd.read_csv(uploaded_file, encoding='utf-8')
+        # 检查列名是否正确
+        required_cols = ["日期", "班级", "学生姓名", "是否到课"]
+        if not all(col in df.columns for col in required_cols):
+            return False, "CSV文件列名错误！必须包含：日期、班级、学生姓名、是否到课"
+        
+        # 覆盖写入服务器CSV（也可选择追加，这里选覆盖更安全）
+        df.to_csv(CSV_FILE, index=False, encoding='utf-8')
+        return True, "考勤记录导入成功！"
+    except Exception as e:
+        return False, f"导入失败：{str(e)}"
+
+def import_student_json(uploaded_file):
+    """导入学员JSON文件"""
+    try:
+        # 读取上传的JSON
+        config = json.load(uploaded_file)
+        # 简单验证格式
+        if "街舞1班" not in config or "街舞2班" not in config:
+            return False, "JSON文件格式错误！必须包含街舞1班、街舞2班配置"
+        
+        # 覆盖写入服务器JSON
+        save_student_config(config)
+        return True, "学员信息导入成功！"
+    except Exception as e:
+        return False, f"导入失败：{str(e)}"
+
 # ---------------------- 主页面逻辑 ----------------------
 init_files()
 config = get_student_config()
@@ -94,7 +127,7 @@ config = get_student_config()
 st.sidebar.title("💃 街舞考勤系统")
 page = st.sidebar.radio(
     "功能菜单",
-    ["首页", "考勤录入", "学员管理", "月度统计", "学生追踪", "记录管理"],
+    ["首页", "考勤录入", "学员管理", "月度统计", "学生追踪", "记录管理", "数据备份恢复"],  # 新增：数据备份恢复页
     index=0  # 默认选中首页
 )
 
@@ -108,17 +141,18 @@ if page == "首页":
         st.markdown("""
         - 📝 **考勤录入**：记录各班学员到课情况
         - 👥 **学员管理**：新增/修改/分班学员
+        - 📊 **月度统计**：查看考勤数据和费用
         """)
     with col2:
         st.markdown("""
-        - 📊 **月度统计**：查看考勤数据和费用
         - 🔍 **学生追踪**：查询单个学员考勤
         - 🗑️ **记录管理**：删除错误考勤记录
+        - 💾 **数据备份恢复**：导出/导入考勤/学员数据
         """)
     st.divider()
     st.info("💡 请通过左侧【功能菜单】选择需要使用的功能", icon="ℹ️")
 
-# 2. 考勤录入（核心功能，保留自动选班默认值）
+# 2. 考勤录入（核心功能）
 elif page == "考勤录入":
     st.title("📝 考勤录入")
     # 直接选择班级，无依赖首页按钮，更稳定
@@ -153,7 +187,7 @@ elif page == "考勤录入":
             csv.writer(f).writerows(records)
         st.success(f"✅ {selected_date_str} {current_class} 到课 {len(attended_students)} 人")
 
-# 3. 学员管理（无改动，保持原有功能）
+# 3. 学员管理（无改动）
 elif page == "学员管理":
     st.title("👥 学员管理")
     
@@ -329,3 +363,71 @@ elif page == "记录管理":
                     st.rerun()
     else:
         st.info("暂无符合条件的考勤记录")
+
+# 7. 新增：数据备份恢复页面
+elif page == "数据备份恢复":
+    st.title("💾 数据备份与恢复")
+    st.divider()
+    
+    # 第一部分：数据导出（备份）
+    st.subheader("📤 数据导出（备份到本地）")
+    col1, col2 = st.columns(2)
+    with col1:
+        # 导出考勤CSV
+        if os.path.exists(CSV_FILE):
+            with open(CSV_FILE, "rb") as f:
+                st.download_button(
+                    label="下载考勤记录 (CSV)",
+                    data=f,
+                    file_name=f"街舞考勤记录_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+        else:
+            st.warning("暂无考勤记录可导出")
+    
+    with col2:
+        # 导出学员JSON
+        if os.path.exists(STUDENT_CONFIG_FILE):
+            with open(STUDENT_CONFIG_FILE, "rb") as f:
+                st.download_button(
+                    label="下载学员信息 (JSON)",
+                    data=f,
+                    file_name=f"街舞学员信息_{datetime.now().strftime('%Y%m%d')}.json",
+                    mime="application/json",
+                    use_container_width=True
+                )
+        else:
+            st.warning("暂无学员信息可导出")
+    
+    st.divider()
+    
+    # 第二部分：数据导入（恢复）
+    st.subheader("📥 数据导入（从本地恢复）")
+    st.warning("⚠️ 导入会覆盖当前服务器上的所有数据，请确保备份后再操作！")
+    
+    # 导入考勤CSV
+    uploaded_csv = st.file_uploader("上传考勤记录CSV文件", type=["csv"], key="upload_csv")
+    if st.button("导入考勤记录", key="import_csv_btn", use_container_width=True):
+        if uploaded_csv is not None:
+            success, msg = import_attendance_csv(uploaded_csv)
+            if success:
+                st.success(msg)
+                st.rerun()
+            else:
+                st.error(msg)
+        else:
+            st.error("请先选择要上传的CSV文件")
+    
+    # 导入学员JSON
+    uploaded_json = st.file_uploader("上传学员信息JSON文件", type=["json"], key="upload_json")
+    if st.button("导入学员信息", key="import_json_btn", use_container_width=True):
+        if uploaded_json is not None:
+            success, msg = import_student_json(uploaded_json)
+            if success:
+                st.success(msg)
+                st.rerun()
+            else:
+                st.error(msg)
+        else:
+            st.error("请先选择要上传的JSON文件")
