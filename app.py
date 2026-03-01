@@ -31,14 +31,8 @@ st.set_page_config(
     page_title="街舞考勤系统",
     page_icon="💃",
     layout="centered",  # 移动端优先
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"  # 默认展开侧边栏，方便操作
 )
-
-# 初始化会话状态
-if "selected_page" not in st.session_state:
-    st.session_state["selected_page"] = "首页"
-if "default_class" not in st.session_state:
-    st.session_state["default_class"] = "街舞1班"
 
 # 基础配置
 CSV_FILE = "dance_student_records.csv"
@@ -96,37 +90,43 @@ def delete_record(date, class_name, student):
 init_files()
 config = get_student_config()
 
-# 侧边栏导航（移动端自动折叠）
+# 侧边栏导航（核心操作入口，默认展开）
 st.sidebar.title("💃 街舞考勤系统")
 page = st.sidebar.radio(
-    "选择功能",
+    "功能菜单",
     ["首页", "考勤录入", "学员管理", "月度统计", "学生追踪", "记录管理"],
-    index=["首页", "考勤录入", "学员管理", "月度统计", "学生追踪", "记录管理"].index(st.session_state["selected_page"])
+    index=0  # 默认选中首页
 )
 
-# 1. 首页（有效按钮版）
+# 1. 首页（简洁欢迎界面，无任何按钮）
 if page == "首页":
-    st.title("选择班级")
+    st.title("🎉 欢迎使用街舞考勤系统")
+    st.divider()  # 分割线美化
+    st.subheader("📋 系统功能说明")
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("街舞1班", type="primary", use_container_width=True):
-            st.session_state["default_class"] = "街舞1班"
-            st.session_state["selected_page"] = "考勤录入"
-            st.rerun()
+        st.markdown("""
+        - 📝 **考勤录入**：记录各班学员到课情况
+        - 👥 **学员管理**：新增/修改/分班学员
+        """)
     with col2:
-        if st.button("街舞2班", type="primary", use_container_width=True):
-            st.session_state["default_class"] = "街舞2班"
-            st.session_state["selected_page"] = "考勤录入"
-            st.rerun()
+        st.markdown("""
+        - 📊 **月度统计**：查看考勤数据和费用
+        - 🔍 **学生追踪**：查询单个学员考勤
+        - 🗑️ **记录管理**：删除错误考勤记录
+        """)
+    st.divider()
+    st.info("💡 请通过左侧【功能菜单】选择需要使用的功能", icon="ℹ️")
 
-# 2. 考勤录入（自动选班版）
+# 2. 考勤录入（核心功能，保留自动选班默认值）
 elif page == "考勤录入":
-    st.title("考勤录入")
-    # 优先使用按钮选中的班级，否则默认选街舞1班
+    st.title("📝 考勤录入")
+    # 直接选择班级，无依赖首页按钮，更稳定
     current_class = st.selectbox(
         "选择班级",
         ["街舞1班", "街舞2班"],
-        index=["街舞1班", "街舞2班"].index(st.session_state["default_class"])
+        index=0,  # 默认选街舞1班
+        key="att_class_select"
     )
     students = config[current_class]["students"]
     
@@ -134,12 +134,15 @@ elif page == "考勤录入":
     selected_date = st.date_input("选择日期", datetime.now(), key="att_date")
     selected_date_str = selected_date.strftime("%Y-%m-%d")
     
-    # 学员勾选
+    # 学员勾选（优化排版，手机端更友好）
     st.subheader(f"{current_class} 学员列表")
+    # 按2列展示勾选框，减少手机端滚动
+    student_cols = st.columns(2)
     attended_students = []
-    for student in students:
-        if st.checkbox(student, key=f"stu_{student}"):
-            attended_students.append(student)
+    for idx, student in enumerate(students):
+        with student_cols[idx % 2]:
+            if st.checkbox(student, key=f"stu_{current_class}_{student}"):
+                attended_students.append(student)
     
     # 保存考勤
     if st.button("保存考勤记录", type="primary", use_container_width=True):
@@ -150,9 +153,9 @@ elif page == "考勤录入":
             csv.writer(f).writerows(records)
         st.success(f"✅ {selected_date_str} {current_class} 到课 {len(attended_students)} 人")
 
-# 3. 学员管理
+# 3. 学员管理（无改动，保持原有功能）
 elif page == "学员管理":
-    st.title("学员管理")
+    st.title("👥 学员管理")
     
     # 新增学员
     st.subheader("新增学员")
@@ -223,9 +226,9 @@ elif page == "学员管理":
                     st.success(f"✅ 已删除{cls}的「{stu}」")
                     st.rerun()
 
-# 4. 月度统计
+# 4. 月度统计（无改动）
 elif page == "月度统计":
-    st.title("月度统计")
+    st.title("📊 月度统计")
     col1, col2 = st.columns(2)
     with col1:
         year = st.text_input("年份", str(datetime.now().year), key="stat_year")
@@ -262,9 +265,9 @@ elif page == "月度统计":
         else:
             st.error("❌ 请输入有效的年份/月份")
 
-# 5. 学生追踪
+# 5. 学生追踪（无改动）
 elif page == "学生追踪":
-    st.title("学生考勤追踪")
+    st.title("🔍 学生考勤追踪")
     all_students = sorted({s for c in config.values() for s in c['students']})
     selected_stu = st.selectbox("选择学生", all_students, key="track_stu")
     
@@ -285,9 +288,9 @@ elif page == "学生追踪":
         else:
             st.error("❌ 暂无任何考勤记录")
 
-# 6. 记录管理（修复重复key报错）
+# 6. 记录管理（保留修复后的唯一key）
 elif page == "记录管理":
-    st.title("管理考勤记录")
+    st.title("🗑️ 管理考勤记录")
     # 筛选
     col1, col2 = st.columns(2)
     with col1:
