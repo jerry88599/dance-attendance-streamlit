@@ -29,13 +29,13 @@ st.set_page_config(
     page_title="街舞考勤",
     page_icon="💃",
     layout="centered",
-    initial_sidebar_state="collapsed"  # 侧边栏默认收起，我们用底部导航
+    initial_sidebar_state="collapsed"  # 侧边栏默认收起
 )
 
 # 全局样式优化
 st.markdown("""
 <style>
-div.block-container { padding-top:1rem; padding-bottom:4rem; } /* 给底部导航留出空间 */
+div.block-container { padding-top:1rem; padding-bottom:2rem; }
 div.stButton > button { width:100%; }
 .stSelectbox, .stTextInput { margin-bottom:10px; }
 </style>
@@ -121,7 +121,7 @@ def import_student_json(uploaded_file):
 init_files()
 config = get_student_config()
 
-# ===================== 底部导航栏（核心优化） =====================
+# ===================== 顶部导航栏（核心修复） =====================
 with st.container():
     page = option_menu(
         menu_title=None,
@@ -131,9 +131,9 @@ with st.container():
         default_index=0,
         orientation="horizontal",
         styles={
-            "container": {"padding": "0!important", "background-color": "#262730", "position": "fixed", "bottom": 0, "left": 0, "right": 0},
-            "icon": {"color": "white", "font-size": "20px"},
-            "nav-link": {"font-size": "12px", "text-align": "center", "margin": "0px", "--hover-color": "#4169E1"},
+            "container": {"padding": "0!important", "background-color": "#262730"},
+            "icon": {"color": "white", "font-size": "16px"},
+            "nav-link": {"font-size": "10px", "text-align": "center", "margin": "0px", "--hover-color": "#4169E1"},
             "nav-link-selected": {"background-color": "#4169E1"},
         }
     )
@@ -149,7 +149,7 @@ if page == "首页":
     with col2:
         st.info("🔍 学生追踪\n🗑️ 记录管理\n💾 备份恢复")
     st.divider()
-    st.success("请从底部导航选择功能开始操作 ✅")
+    st.success("请从顶部导航选择功能开始操作 ✅")
 
 # ------------------- 2. 考勤录入（修复重复保存问题） -------------------
 elif page == "考勤录入":
