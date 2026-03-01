@@ -4,6 +4,28 @@ import os
 from datetime import datetime
 import json
 
+# 访问密码验证（改成你自己的密码）
+def check_access():
+    # 初始化密码状态
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+    
+    # 未验证时显示密码输入框
+    if not st.session_state.authenticated:
+        st.title("🔒 请验证访问权限")
+        password = st.text_input("输入访问密码", type="password")
+        if st.button("验证"):
+            # 改成你自己的密码（比如你的手机号后6位）
+            if password == "123456":  
+                st.session_state.authenticated = True
+                st.rerun()  # 验证通过后刷新页面
+            else:
+                st.error("密码错误，请重试")
+        st.stop()  # 未验证通过则停止执行后续代码
+
+# 执行密码验证
+check_access()
+
 # 页面配置（手机适配）
 st.set_page_config(
     page_title="街舞考勤系统",
@@ -11,6 +33,12 @@ st.set_page_config(
     layout="centered",  # 移动端优先
     initial_sidebar_state="collapsed"
 )
+
+# 初始化会话状态
+if "selected_page" not in st.session_state:
+    st.session_state["selected_page"] = "首页"
+if "default_class" not in st.session_state:
+    st.session_state["default_class"] = "街舞1班"
 
 # 基础配置
 CSV_FILE = "dance_student_records.csv"
@@ -72,26 +100,34 @@ config = get_student_config()
 st.sidebar.title("💃 街舞考勤系统")
 page = st.sidebar.radio(
     "选择功能",
-    ["首页", "考勤录入", "学员管理", "月度统计", "学生追踪", "记录管理"]
+    ["首页", "考勤录入", "学员管理", "月度统计", "学生追踪", "记录管理"],
+    index=["首页", "考勤录入", "学员管理", "月度统计", "学生追踪", "记录管理"].index(st.session_state["selected_page"])
 )
 
-# 1. 首页
+# 1. 首页（有效按钮版）
 if page == "首页":
     st.title("选择班级")
     col1, col2 = st.columns(2)
     with col1:
         if st.button("街舞1班", type="primary", use_container_width=True):
-            st.session_state["current_class"] = "街舞1班"
-            st.switch_page("app.py")  # 刷新到考勤录入页
+            st.session_state["default_class"] = "街舞1班"
+            st.session_state["selected_page"] = "考勤录入"
+            st.rerun()
     with col2:
         if st.button("街舞2班", type="primary", use_container_width=True):
-            st.session_state["current_class"] = "街舞2班"
-            st.switch_page("app.py")
+            st.session_state["default_class"] = "街舞2班"
+            st.session_state["selected_page"] = "考勤录入"
+            st.rerun()
 
-# 2. 考勤录入
+# 2. 考勤录入（自动选班版）
 elif page == "考勤录入":
     st.title("考勤录入")
-    current_class = st.selectbox("选择班级", ["街舞1班", "街舞2班"], key="class_select")
+    # 优先使用按钮选中的班级，否则默认选街舞1班
+    current_class = st.selectbox(
+        "选择班级",
+        ["街舞1班", "街舞2班"],
+        index=["街舞1班", "街舞2班"].index(st.session_state["default_class"])
+    )
     students = config[current_class]["students"]
     
     # 日期选择
